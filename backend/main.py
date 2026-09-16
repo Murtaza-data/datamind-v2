@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, ToolMessage
+from langchain_core.tracers.context import tracing_v2_enabled
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
 load_dotenv()
@@ -22,21 +23,22 @@ async def load_tools():
     llm_with_tools = llm.bind_tools(tools)
 
 async def run_agent(question, max_turns=8):
-    messages = [HumanMessage(question)]
-    for turn in range(max_turns):
-        ai_msg = await llm_with_tools.ainvoke(messages)
-        messages.append(ai_msg)
-        if not ai_msg.tool_calls:
-            return ai_msg.content
-        for tool_call in ai_msg.tool_calls:
-            selected_tool = tools_by_name[tool_call["name"]]
-            result = await selected_tool.ainvoke(tool_call["args"])
-            messages.append(ToolMessage(str(result), tool_call_id=tool_call["id"]))
-    return "Stopped: hit max turns."
+    with tracing_v2_enabled(project_name="datamind-v2"):      # observability
+        messages = [HumanMessage(question)]
+        for turn in range(max_turns):
+            ai_msg = await llm_with_tools.ainvoke(messages)
+            messages.append(ai_msg)
+            if not ai_msg.tool_calls:
+                return ai_msg.content
+            for tool_call in ai_msg.tool_calls:
+                selected_tool = tools_by_name[tool_call["name"]]
+                result = await selected_tool.ainvoke(tool_call["args"])
+                messages.append(ToolMessage(str(result), tool_call_id=tool_call["id"]))
+        return "Stopped: hit max turns."
 
 @asynccontextmanager
 async def lifespan(app):
-    await load_tools()      # load MCP tools ONCE when the server starts
+    await load_tools()      # load MCP tools once at startup
     yield
 
 app = FastAPI(lifespan=lifespan)
