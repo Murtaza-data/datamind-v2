@@ -16,7 +16,7 @@ def get_connection():
         password=os.environ["DB_PASSWORD"],
     )      
 
-mcp = FastMCP("datamind")
+mcp = FastMCP("datamind", host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
 
 
 
