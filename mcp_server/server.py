@@ -3,6 +3,7 @@ import psycopg2
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 
+
 load_dotenv()                                 
 
 
@@ -55,6 +56,16 @@ def run_sql(query: str) -> str:
     except Exception as e:
         conn.rollback(); cur.close(); conn.close()
         return f"ERROR: {e}"
+
+@mcp.tool()
+def make_chart(labels: list[str], values: list[float], chart_type: str = "bar") -> str:
+    """Display a chart to the user. Use this when the answer is better shown visually.
+    labels = the category / x-axis names, values = their numbers.
+    chart_type = "bar", "line", or "pie" — pick the most suitable one:
+      - "bar"  for comparing categories (e.g. revenue by category)
+      - "line" for trends over time (e.g. sales per month)
+      - "pie"  for proportions of a whole (e.g. % share)."""
+    return "Chart displayed to the user."       
 
 if __name__ == "__main__":
     mcp.run(transport="streamable-http")
