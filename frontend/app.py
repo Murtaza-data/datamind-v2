@@ -4,7 +4,7 @@ import requests
 import pandas as pd
 import matplotlib.pyplot as plt
 
-BACKEND_URL = os.environ.get("BACKEND_URL", "http://127.0.0.1:8001")
+BACKEND_URL = os.environ.get("BACKEND_URL", "https://datamind-backend-lo79.onrender.com")
 
 st.title("DataMind v2 🧠")
 st.write("Ask a question about the Brazilian e-commerce data.")
