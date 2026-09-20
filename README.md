@@ -69,11 +69,13 @@ Olist Brazilian E-Commerce — **100,000+ real orders** across customers, order 
 
 <img width="1311" height="753" alt="Screenshot 2026-09-17 153324" src="https://github.com/user-attachments/assets/9d6d27c7-b2c2-4e9b-902c-d3957f7b10a2" />
 
+<br><br>
 
 **The agent decides to visualize — a chart it drew on its own**
 
 <img width="1716" height="814" alt="Screenshot 2026-09-17 153201" src="https://github.com/user-attachments/assets/205eeb6f-3338-4133-9aa9-41cf0e396071" />
 
+<br><br>
 
 **Observability — every agent step traced in LangSmith (inputs, outputs, tokens, latency)**
 
