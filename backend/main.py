@@ -1,5 +1,5 @@
 import os
-from contextlib import asynccontextmanager
+import asyncio
 from fastapi import FastAPI
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -15,36 +15,41 @@ llm = ChatGroq(model="openai/gpt-oss-120b", temperature=0)
 tools_by_name = {}
 llm_with_tools = None
 
-async def load_tools():
+async def ensure_tools(retries=6):
     global tools_by_name, llm_with_tools
+    if llm_with_tools is not None:          # already loaded → skip
+        return
     client = MultiServerMCPClient({"datamind": {"url": MCP_URL, "transport": "streamable_http"}})
-    tools = await client.get_tools()
-    tools_by_name = {t.name: t for t in tools}
-    llm_with_tools = llm.bind_tools(tools)
+    for attempt in range(retries):
+        try:
+            tools = await client.get_tools()
+            tools_by_name = {t.name: t for t in tools}
+            llm_with_tools = llm.bind_tools(tools)
+            return
+        except Exception:
+            if attempt == retries - 1:
+                raise
+            await asyncio.sleep(10)          # MCP server may be waking — wait and retry
 
 async def run_agent(question, max_turns=8):
+    await ensure_tools()                     # load tools on first use, not at startup
     with tracing_v2_enabled(project_name="datamind-v2"):
         messages = [HumanMessage(question)]
-        chart = None                                     # ← NEW: holds chart data
+        chart = None
         for turn in range(max_turns):
             ai_msg = await llm_with_tools.ainvoke(messages)
             messages.append(ai_msg)
             if not ai_msg.tool_calls:
-                return ai_msg.content, chart             # ← NEW: return both
+                return ai_msg.content, chart
             for tool_call in ai_msg.tool_calls:
-                if tool_call["name"] == "make_chart":    # ← NEW: grab the chart data
+                if tool_call["name"] == "make_chart":
                     chart = tool_call["args"]
                 selected_tool = tools_by_name[tool_call["name"]]
                 result = await selected_tool.ainvoke(tool_call["args"])
                 messages.append(ToolMessage(str(result), tool_call_id=tool_call["id"]))
-        return "Stopped: hit max turns.", chart          # ← NEW: return both
+        return "Stopped: hit max turns.", chart
 
-@asynccontextmanager
-async def lifespan(app):
-    await load_tools()      # load MCP tools once at startup
-    yield
-
-app = FastAPI(lifespan=lifespan)
+app = FastAPI()
 
 class Question(BaseModel):
     question: str
