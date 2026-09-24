@@ -1,6 +1,8 @@
 import os
 import psycopg2
 from dotenv import load_dotenv
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 from mcp.server.fastmcp import FastMCP
 
 
@@ -17,6 +19,10 @@ def get_connection():
     )      
 
 mcp = FastMCP("datamind", host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
+
+@mcp.custom_route("/health", methods=["GET"])
+async def health(request: Request):
+    return JSONResponse({"status": "ok"})
 
 
 
